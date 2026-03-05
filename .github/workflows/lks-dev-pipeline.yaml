@@ -1,0 +1,110 @@
+name: LKS Dev Pipeline
+
+on:
+  push:
+    branches:
+      - dev
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: lks-voting-image
+  IMAGE_TAG: dev-latest
+
+jobs:
+  build:
+    name: Build application image to docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build Vote Image
+        run: |
+          docker build -t $ECR_REPOSITORY:vote-dev-latest ./vote
+          docker tag $ECR_REPOSITORY:vote-dev-latest ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:vote-dev-latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:vote-dev-latest
+
+      - name: Build Result Image
+        run: |
+          docker build -t $ECR_REPOSITORY:result-dev-latest ./result
+          docker tag $ECR_REPOSITORY:result-dev-latest ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:result-dev-latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:result-dev-latest
+
+      - name: Build Worker Image
+        run: |
+          docker build -t $ECR_REPOSITORY:worker-dev-latest ./worker
+          docker tag $ECR_REPOSITORY:worker-dev-latest ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:worker-dev-latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:worker-dev-latest
+
+
+  pull-master:
+    name: Pull Image on master
+    runs-on: [self-hosted, master]
+    needs: build
+
+    steps:
+      - name: Login ECR
+        run: |
+          aws ecr get-login-password --region us-east-1 \
+          | docker login --username AWS --password-stdin 340990990989.dkr.ecr.us-east-1.amazonaws.com
+
+      - name: Pull Images
+        run: |
+          docker pull 340990990989.dkr.ecr.us-east-1.amazonaws.com/lks-voting-image:vote-dev-latest
+          docker pull 340990990989.dkr.ecr.us-east-1.amazonaws.com/lks-voting-image:result-dev-latest
+          docker pull 340990990989.dkr.ecr.us-east-1.amazonaws.com/lks-voting-image:worker-dev-latest
+
+
+  pull-node1:
+    name: Pull Image on node 1
+    runs-on: [self-hosted, node1]
+    needs: build
+
+    steps:
+      - name: Pull Images
+        run: |
+          docker pull 340990990989.dkr.ecr.us-east-1.amazonaws.com/lks-voting-image:vote-dev-latest
+          docker pull 340990990989.dkr.ecr.us-east-1.amazonaws.com/lks-voting-image:result-dev-latest
+          docker pull 340990990989.dkr.ecr.us-east-1.amazonaws.com/lks-voting-image:worker-dev-latest
+
+
+  pull-node2:
+    name: Pull Image on node 2
+    runs-on: [self-hosted, node2]
+    needs: build
+
+    steps:
+      - name: Pull Images
+        run: |
+          docker pull 340990990989.dkr.ecr.us-east-1.amazonaws.com/lks-voting-image:vote-dev-latest
+          docker pull 340990990989.dkr.ecr.us-east-1.amazonaws.com/lks-voting-image:result-dev-latest
+          docker pull 340990990989.dkr.ecr.us-east-1.amazonaws.com/lks-voting-image:worker-dev-latest
+
+
+  deploy:
+    name: Deploy Application into docker swarm
+    runs-on: [self-hosted, master]
+    needs: [pull-master, pull-node1, pull-node2]
+
+    steps:
+      - name: Deploy to Docker Swarm
+        run: |
+          docker service update \
+          --image 340990990989.dkr.ecr.us-east-1.amazonaws.com/lks-voting-image:vote-dev-latest vote
+
+          docker service update \
+          --image 340990990989.dkr.ecr.us-east-1.amazonaws.com/lks-voting-image:result-dev-latest result
+
+          docker service update \
+          --image 340990990989.dkr.ecr.us-east-1.amazonaws.com/lks-voting-image:worker-dev-latest worker
