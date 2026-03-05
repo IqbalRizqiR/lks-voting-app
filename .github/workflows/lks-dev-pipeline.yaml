@@ -102,7 +102,7 @@ jobs:
 
 
   deploy:
-    name: Deploy Application into docker swarm
+    name: Deploy Application into docker swarms
     runs-on: [self-hosted, master]
     needs: [pull-master, pull-node1, pull-node2]
 
