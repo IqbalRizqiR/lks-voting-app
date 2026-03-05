@@ -73,6 +73,10 @@ jobs:
     needs: build
 
     steps:
+      - name: Login ECR
+        run: |
+          aws ecr get-login-password --region us-east-1 \
+          | docker login --username AWS --password-stdin 340990990989.dkr.ecr.us-east-1.amazonaws.com
       - name: Pull Images
         run: |
           docker pull 340990990989.dkr.ecr.us-east-1.amazonaws.com/lks-voting-image:vote-dev-latest
@@ -86,6 +90,10 @@ jobs:
     needs: build
 
     steps:
+      - name: Login ECR
+        run: |
+          aws ecr get-login-password --region us-east-1 \
+          | docker login --username AWS --password-stdin 340990990989.dkr.ecr.us-east-1.amazonaws.com
       - name: Pull Images
         run: |
           docker pull 340990990989.dkr.ecr.us-east-1.amazonaws.com/lks-voting-image:vote-dev-latest
