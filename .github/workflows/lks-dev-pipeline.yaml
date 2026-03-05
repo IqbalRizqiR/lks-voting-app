@@ -25,6 +25,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
+      - name: Debug registry
+        run: echo "${{ steps.login-ecr.outputs.registry }}"
 
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v1
