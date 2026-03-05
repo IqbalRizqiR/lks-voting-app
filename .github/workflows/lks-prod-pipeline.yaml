@@ -60,26 +60,32 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
-      - name: Deploy Vote Service
-        run: |
-          aws ecs update-service \
-          --cluster lks-voting-cluster \
-          --service lks-vote-service \
-          --force-new-deployment
+      - name: deploy ecs task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: result/task-definition.json
+          service: lks-result-container
+          cluster: lks-voting-cluster
+          force-new-deployment: true
+          run-task-tags: '[{"key": "", "value": ""} , ...]'
 
-      - name: Deploy Result Service
-        run: |
-          aws ecs update-service \
-          --cluster lks-voting-cluster \
-          --service lks-result-service \
-          --force-new-deployment
+      - name: deploy ecs task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: vote/task-definition.json
+          service: lks-vote-container
+          cluster: lks-voting-cluster
+          force-new-deployment: true
+          run-task-tags: '[{"key": "", "value": ""} , ...]'
 
-      - name: Deploy Worker Service
-        run: |
-          aws ecs update-service \
-          --cluster lks-voting-cluster \
-          --service lks-worker-service \
-          --force-new-deployment
+      - name: deploy ecs task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: worker/task-definition.json
+          service: lks-worker-container
+          cluster: lks-voting-cluster
+          force-new-deployment: true
+          run-task-tags: '[{"key": "", "value": ""} , ...]'
 
       - name: Send SNS Notification
         run: |
